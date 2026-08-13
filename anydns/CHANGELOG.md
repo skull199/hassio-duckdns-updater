@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0
+
+- New option `update_on_start` (on by default): every account is updated once
+  right after the add-on starts, even when the stored address is unchanged.
+  Restarting the add-on is now enough to force a refresh.
+
 ## 1.0.0
 
 First release.

@@ -104,6 +104,7 @@ OPT_IPV6=""
 OPT_SECONDS=300
 OPT_SKIP_UNCHANGED="true"
 OPT_FORCE_HOURS=24
+OPT_UPDATE_ON_START="true"
 
 options::string() {
     local key="${1}" default="${2:-}" value
@@ -154,6 +155,7 @@ options::load() {
     OPT_SECONDS="$(options::number 'seconds' 300)"
     OPT_SKIP_UNCHANGED="$(options::bool 'skip_unchanged' 'true')"
     OPT_FORCE_HOURS="$(options::number 'force_update_hours' 24)"
+    OPT_UPDATE_ON_START="$(options::bool 'update_on_start' 'true')"
 
     if (( OPT_SECONDS < 60 )); then
         log::warning "An update interval of ${OPT_SECONDS}s is too aggressive, using 60s."
@@ -477,6 +479,10 @@ state::set() {
 # ------------------------------------------------------------------------------
 # Update cycle
 # ------------------------------------------------------------------------------
+# Set for the first cycle after start, so a restart always refreshes DuckDNS
+# when 'update_on_start' is enabled.
+FIRST_CYCLE="true"
+
 cycle::run() {
     local now force_seconds entry name token domains previous_v4 previous_v6 updated reason
 
@@ -495,7 +501,9 @@ cycle::run() {
         [[ "${updated}" =~ ^[0-9]+$ ]] || updated=0
 
         reason=""
-        if [[ "${OPT_SKIP_UNCHANGED}" != "true" ]]; then
+        if [[ "${FIRST_CYCLE}" == "true" && "${OPT_UPDATE_ON_START}" == "true" ]]; then
+            reason="the add-on was just started"
+        elif [[ "${OPT_SKIP_UNCHANGED}" != "true" ]]; then
             reason="'skip_unchanged' is disabled"
         elif [[ -z "${CURRENT_IPV4}" && -z "${CURRENT_IPV6}" ]]; then
             reason="the address is determined by DuckDNS itself"
@@ -520,6 +528,7 @@ cycle::run() {
         fi
     done
 
+    FIRST_CYCLE="false"
     log::debug "Cycle finished, next check in ${OPT_SECONDS}s."
     return 0
 }
@@ -575,6 +584,9 @@ main() {
         fi
     else
         log::info "Every account is updated on every cycle."
+    fi
+    if [[ "${OPT_UPDATE_ON_START}" == "true" ]]; then
+        log::info "Every account is refreshed once now, because the add-on was started."
     fi
 
     while [[ "${RUNNING}" == "true" ]]; do

@@ -16,8 +16,8 @@ RUN apk add --no-cache \
         jq \
         tzdata
 
-COPY run.sh /usr/bin/duckdns-updater
-RUN chmod a+x /usr/bin/duckdns-updater
+COPY run.sh /usr/bin/anydns
+RUN chmod a+x /usr/bin/anydns
 
 # Build metadata, filled in by the Supervisor / the add-on builder.
 ARG BUILD_ARCH
@@ -38,10 +38,10 @@ LABEL \
     org.opencontainers.image.title="${BUILD_NAME}" \
     org.opencontainers.image.description="${BUILD_DESCRIPTION}" \
     org.opencontainers.image.source="https://github.com/${BUILD_REPOSITORY}" \
-    org.opencontainers.image.documentation="https://github.com/${BUILD_REPOSITORY}/blob/main/duckdns-updater/DOCS.md" \
+    org.opencontainers.image.documentation="https://github.com/${BUILD_REPOSITORY}/blob/main/anydns/DOCS.md" \
     org.opencontainers.image.licenses="MIT" \
     org.opencontainers.image.created="${BUILD_DATE}" \
     org.opencontainers.image.revision="${BUILD_REF}" \
     org.opencontainers.image.version="${BUILD_VERSION}"
 
-CMD [ "/usr/bin/duckdns-updater" ]
+CMD [ "/usr/bin/anydns" ]

@@ -1,0 +1,36 @@
+---
+configuration:
+  accounts:
+    name: DNS računi
+    description: >-
+      En vnos za vsak DuckDNS žeton. Vsakemu vnosu dodaj žeton in seznam domen,
+      ki mu pripadajo, brez končnice .duckdns.org. Ime je neobvezno in se
+      uporablja v dnevniku. Trenutno je podprt samo DuckDNS.
+  ipv4:
+    name: Naslov IPv4
+    description: >-
+      "auto" poišče javni naslov IPv4, prazna vrednost prepusti določitev
+      DuckDNS-u (izvorni naslov zahteve), lahko pa vpišeš fiksni naslov.
+  ipv6:
+    name: Naslov IPv6
+    description: >-
+      Prazno pusti zapis AAAA pri miru, "auto" poišče javni naslov IPv6, lahko
+      pa vpišeš fiksni naslov.
+  seconds:
+    name: Interval preverjanja
+    description: >-
+      Kako pogosto se preveri javni naslov, v sekundah (60 - 86400).
+  skip_unchanged:
+    name: Preskoči nespremenjene naslove
+    description: >-
+      Posodobitev na DuckDNS pošlji samo, kadar se je naslov res spremenil.
+  force_update_hours:
+    name: Prisilna osvežitev
+    description: >-
+      Po toliko urah posodobi vse račune tudi, če se ni nič spremenilo, da
+      domene ne potečejo. 0 izklopi prisilno osvežitev.
+  log_level:
+    name: Raven dnevnika
+    description: >-
+      Koliko podrobnosti se zapisuje v dnevnik. "info" beleži vse korake,
+      "debug" doda še podrobnosti poizvedb.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Home Assistant add-on: DuckDNS Updater
+# Home Assistant add-on: AnyDNS
 #
 # Keeps one or more DuckDNS accounts pointed at the public IP address of this
 # host. An account is a token together with the domains that belong to it, so
@@ -107,8 +107,10 @@ OPT_FORCE_HOURS=24
 
 options::string() {
     local key="${1}" default="${2:-}" value
+    # `has` instead of `//`, because `//` would also replace a legitimate
+    # `false` with the default value.
     value="$(jq -r --arg key "${key}" --arg default "${default}" '
-        (if (.[$key] // null) == null then $default else .[$key] end) | tostring
+        (if (has($key) and .[$key] != null) then .[$key] else $default end) | tostring
     ' "${OPTIONS_FILE}" 2>/dev/null)" || value="${default}"
     printf '%s' "$(string::trim "${value}")"
 }
@@ -306,17 +308,20 @@ ip::resolve() {
 
     case "${OPT_IPV4,,}" in
         "" | duckdns | source)
-            log::debug "IPv4 is left to DuckDNS (source address of the request)."
+            log::info "IPv4: left to DuckDNS, it uses the source address of the request."
             ;;
         auto)
-            if ! CURRENT_IPV4="$(ip::detect 4)"; then
+            if CURRENT_IPV4="$(ip::detect 4)"; then
+                log::info "IPv4: current public address is ${CURRENT_IPV4}."
+            else
                 CURRENT_IPV4=""
-                log::warning "Could not determine the public IPv4 address, letting DuckDNS use the source address."
+                log::warning "IPv4: could not determine the public address, letting DuckDNS use the source address."
             fi
             ;;
         *)
             if ip::is_valid 4 "${OPT_IPV4}"; then
                 CURRENT_IPV4="${OPT_IPV4}"
+                log::info "IPv4: using the configured address ${CURRENT_IPV4}."
             else
                 log::error "Option 'ipv4' is not a valid IPv4 address ('${OPT_IPV4}'), letting DuckDNS use the source address."
             fi
@@ -325,16 +330,20 @@ ip::resolve() {
 
     case "${OPT_IPV6,,}" in
         "" | disabled | off | "false")
+            log::debug "IPv6: disabled, the AAAA record is left untouched."
             ;;
         auto)
-            if ! CURRENT_IPV6="$(ip::detect 6)"; then
+            if CURRENT_IPV6="$(ip::detect 6)"; then
+                log::info "IPv6: current public address is ${CURRENT_IPV6}."
+            else
                 CURRENT_IPV6=""
-                log::warning "Could not determine the public IPv6 address, the AAAA record is left untouched."
+                log::warning "IPv6: could not determine the public address, the AAAA record is left untouched."
             fi
             ;;
         *)
             if ip::is_valid 6 "${OPT_IPV6}"; then
                 CURRENT_IPV6="${OPT_IPV6}"
+                log::info "IPv6: using the configured address ${CURRENT_IPV6}."
             else
                 log::error "Option 'ipv6' is not a valid IPv6 address ('${OPT_IPV6}'), the AAAA record is left untouched."
             fi
@@ -378,7 +387,7 @@ duckdns::request() {
 
     DUCKDNS_RESPONSE=""
     DUCKDNS_ERROR=""
-    stderr_file="$(mktemp -t duckdns.XXXXXX 2> /dev/null)" || stderr_file="/tmp/duckdns.err"
+    stderr_file="$(mktemp -t anydns.XXXXXX 2> /dev/null)" || stderr_file="/tmp/anydns.err"
 
     DUCKDNS_RESPONSE="$(curl "${args[@]}" 2> "${stderr_file}")"
     status=$?
@@ -471,6 +480,7 @@ state::set() {
 cycle::run() {
     local now force_seconds entry name token domains previous_v4 previous_v6 updated reason
 
+    log::info "Checking the public IP address..."
     ip::resolve
 
     now="$(date +%s)"
@@ -500,15 +510,17 @@ cycle::run() {
         fi
 
         if [[ -z "${reason}" ]]; then
-            log::debug "${name}: ${domains} still points at ${CURRENT_IPV4:-${CURRENT_IPV6}}, nothing to do."
+            log::info "${name}: ${domains} unchanged (${CURRENT_IPV4:-${CURRENT_IPV6}}), no update needed."
             continue
         fi
 
-        log::debug "${name}: updating ${domains} because ${reason}."
+        log::info "${name}: updating ${domains} - ${reason}."
         if account::update "${name}" "${token}" "${domains}"; then
             state::set "${domains}" "${CURRENT_IPV4}" "${CURRENT_IPV6}" "${now}"
         fi
     done
+
+    log::debug "Cycle finished, next check in ${OPT_SECONDS}s."
     return 0
 }
 
@@ -520,7 +532,7 @@ SLEEP_PID=""
 
 service::terminate() {
     RUNNING="false"
-    log::info "Stopping the DuckDNS Updater add-on..."
+    log::info "Stopping the AnyDNS add-on..."
     if [[ -n "${SLEEP_PID}" ]]; then
         kill "${SLEEP_PID}" 2> /dev/null
     fi
@@ -540,7 +552,7 @@ service::wait() {
 main() {
     trap service::terminate TERM INT
 
-    log::info "Starting the DuckDNS Updater add-on..."
+    log::info "Starting the AnyDNS add-on..."
 
     local dependency
     for dependency in curl jq; do
@@ -556,7 +568,11 @@ main() {
 
     log::info "Update interval: ${OPT_SECONDS}s, IPv4: ${OPT_IPV4:-<source address>}, IPv6: ${OPT_IPV6:-disabled}"
     if [[ "${OPT_SKIP_UNCHANGED}" == "true" ]]; then
-        log::info "Unchanged addresses are skipped, with a forced refresh every ${OPT_FORCE_HOURS}h."
+        if (( OPT_FORCE_HOURS > 0 )); then
+            log::info "Unchanged addresses are skipped, with a forced refresh every ${OPT_FORCE_HOURS}h."
+        else
+            log::info "Unchanged addresses are skipped and the periodic refresh is disabled."
+        fi
     else
         log::info "Every account is updated on every cycle."
     fi
@@ -569,7 +585,7 @@ main() {
         [[ "${RUNNING}" == "true" ]] && service::wait "${OPT_SECONDS}"
     done
 
-    log::info "DuckDNS Updater stopped."
+    log::info "AnyDNS stopped."
     return 0
 }
 

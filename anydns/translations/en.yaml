@@ -1,0 +1,37 @@
+---
+configuration:
+  accounts:
+    name: DNS accounts
+    description: >-
+      One entry per DuckDNS token. Give each entry the token and the list of
+      domains that belong to it, without the .duckdns.org suffix. An optional
+      name is used in the log. Currently DuckDNS is the only supported
+      provider.
+  ipv4:
+    name: IPv4 address
+    description: >-
+      "auto" looks up the public IPv4 address, an empty value lets DuckDNS use
+      the source address of the request, or enter a fixed address.
+  ipv6:
+    name: IPv6 address
+    description: >-
+      Empty leaves the AAAA record untouched, "auto" looks up the public IPv6
+      address, or enter a fixed address.
+  seconds:
+    name: Update interval
+    description: >-
+      How often the public address is checked, in seconds (60 - 86400).
+  skip_unchanged:
+    name: Skip unchanged addresses
+    description: >-
+      Only send an update to DuckDNS when the address actually changed.
+  force_update_hours:
+    name: Forced refresh
+    description: >-
+      Update every account after this many hours even when nothing changed, so
+      the domains do not expire. 0 disables the forced refresh.
+  log_level:
+    name: Log level
+    description: >-
+      Amount of detail in the add-on log. "info" records every step, "debug"
+      adds the lookup details.

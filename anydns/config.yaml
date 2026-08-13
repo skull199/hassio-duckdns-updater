@@ -1,11 +1,11 @@
 ---
-name: DuckDNS Updater
+name: AnyDNS
 version: "1.0.0"
-slug: duckdns_updater
+slug: anydns
 description: >-
   Keeps DuckDNS domains pointed at this host's public IP address. Supports
   several DuckDNS accounts - every token gets its own list of domains.
-url: https://github.com/skull199/hassio-duckdns-updater/tree/main/duckdns-updater
+url: https://github.com/skull199/hassio-duckdns-updater/tree/main/anydns
 arch:
   - aarch64
   - amd64

@@ -369,7 +369,7 @@ DUCKDNS_ERROR=""
 # The token is passed with --data-urlencode so it never shows up in the log,
 # and curl's own error output is scrubbed before it is logged.
 duckdns::request() {
-    local token="${1}" domains="${2}"
+    local token="${1}" domain_list="${2}"
     local status stderr_file
     local -a args=(
         --silent
@@ -377,7 +377,7 @@ duckdns::request() {
         --location
         --max-time "${CURL_TIMEOUT}"
         --get "${DUCKDNS_URL}"
-        --data-urlencode "domains=${domains}"
+        --data-urlencode "domains=${domain_list}"
         --data-urlencode "token=${token}"
         --data-urlencode "verbose=true"
     )
@@ -408,12 +408,12 @@ duckdns::request() {
 }
 
 account::update() {
-    local name="${1}" token="${2}" domains="${3}"
+    local name="${1}" token="${2}" domain_list="${3}"
     local attempt status reported_v4 reported_v6 change
     local -a lines=()
 
     for (( attempt = 1; attempt <= UPDATE_ATTEMPTS; attempt++ )); do
-        duckdns::request "${token}" "${domains}"
+        duckdns::request "${token}" "${domain_list}"
         status=$?
 
         if (( status != 0 )); then
@@ -425,12 +425,12 @@ account::update() {
                     reported_v4="$(string::trim "${lines[1]:-}")"
                     reported_v6="$(string::trim "${lines[2]:-}")"
                     change="$(string::trim "${lines[3]:-}")"
-                    log::info "${name}: ${domains} -> IPv4 ${reported_v4:-unchanged}${reported_v6:+, IPv6 ${reported_v6}} (${change:-OK})"
+                    log::info "${name}: ${domain_list} -> IPv4 ${reported_v4:-unchanged}${reported_v6:+, IPv6 ${reported_v6}} (${change:-OK})"
                     return 0
                     ;;
                 KO)
                     log::error "${name}: DuckDNS refused the update (KO)."
-                    log::error "${name}: check that the token is correct and that it owns every domain: ${domains}"
+                    log::error "${name}: check that the token is correct and that it owns every domain: ${domain_list}"
                     # A rejected token or domain will not fix itself, so no retry.
                     return 1
                     ;;
@@ -445,7 +445,7 @@ account::update() {
         fi
     done
 
-    log::error "${name}: could not update ${domains}, retrying at the next interval."
+    log::error "${name}: could not update ${domain_list}, retrying at the next interval."
     return 1
 }
 
@@ -517,7 +517,7 @@ dns::query() {
 # Compares every domain of an account with the address of this cycle. Returns
 # non-zero and fills DNS_MISMATCH as soon as one domain is off.
 dns::account_matches() {
-    local name="${1}" domains="${2}" domain fqdn resolved
+    local name="${1}" domain_list="${2}" domain fqdn resolved
     local -a list=()
 
     DNS_MISMATCH=""
@@ -525,7 +525,7 @@ dns::account_matches() {
     # Without a known address there is nothing to compare against.
     [[ -n "${CURRENT_IPV4}" || -n "${CURRENT_IPV6}" ]] || return 0
 
-    IFS=, read -r -a list <<< "${domains}"
+    IFS=, read -r -a list <<< "${domain_list}"
     for domain in "${list[@]}"; do
         fqdn="${domain}.${DUCKDNS_SUFFIX}"
 

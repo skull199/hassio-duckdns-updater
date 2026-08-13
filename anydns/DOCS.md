@@ -137,11 +137,11 @@ though nothing changed on this side.
 
 This catches the cases the stored state cannot see: a record changed
 somewhere else, a domain that was removed, or an update that silently did
-not take effect. Each lookup is logged, so the add-on log always shows where
-your domains actually point:
+not take effect. Each lookup is written at `debug` level, so
+`log_level: debug` shows where every domain currently points:
 
 ```text
-[21:20:04] INFO: home: myhome.duckdns.org resolves to 203.0.113.7 (matches).
+[21:20:04] DEBUG: home: myhome.duckdns.org resolves to 203.0.113.7 (matches).
 ```
 
 Set it to `false` to skip the lookups entirely.
@@ -163,8 +163,10 @@ days, so do not set this too high. `0` disables the periodic refresh.
 ### Option: `log_level`
 
 One of `trace`, `debug`, `info` (default), `notice`, `warning`, `error`,
-`fatal`. Use `debug` to see the outcome of every cycle, including the
-skipped ones.
+`fatal`. `info` only logs what happened - updates, their reason, and
+problems - so a cycle that changes nothing stays silent. `debug` adds every
+check: the address lookup, the DNS record of each domain and the accounts
+that were skipped.
 
 ## How the update works
 
@@ -188,9 +190,10 @@ skipped ones.
 
 ## What the log looks like
 
-At the default `info` level every step is written to the add-on log: the
-check of the public address, the address that was found, which accounts were
-updated and why, which ones were left alone, and the answer DuckDNS gave.
+The default `info` level only records what actually happened: the settings
+the add-on started with, every update together with the reason for it, the
+answer of DuckDNS, and anything that went wrong. Cycles in which nothing had
+to be done stay silent.
 
 ```text
 [21:15:02] INFO: Starting the AnyDNS add-on...
@@ -198,22 +201,12 @@ updated and why, which ones were left alone, and the answer DuckDNS gave.
 [21:15:02] INFO: Account 'parents': 1 domain(s) -> parents-house
 [21:15:02] INFO: Update interval: 300s, IPv4: auto, IPv6: disabled
 [21:15:02] INFO: Unchanged addresses are skipped, with a forced refresh every 24h.
+[21:15:02] INFO: DNS check: every domain is looked up and compared with the current address (resolver 1.1.1.1).
 [21:15:02] INFO: Every account is refreshed once now, because the add-on was started.
-[21:15:02] INFO: Checking the public IP address...
-[21:15:03] INFO: IPv4: current public address is 203.0.113.7.
 [21:15:03] INFO: home: updating myhome,myhome-vpn - the add-on was just started.
 [21:15:03] INFO: home: myhome,myhome-vpn -> IPv4 203.0.113.7 (UPDATED)
 [21:15:03] INFO: parents: updating parents-house - the add-on was just started.
 [21:15:04] INFO: parents: parents-house -> IPv4 203.0.113.7 (NOCHANGE)
-[21:20:04] INFO: Checking the public IP address...
-[21:20:04] INFO: IPv4: current public address is 203.0.113.7.
-[21:20:04] INFO: home: myhome.duckdns.org resolves to 203.0.113.7 (matches).
-[21:20:04] INFO: home: myhome-vpn.duckdns.org resolves to 203.0.113.7 (matches).
-[21:20:04] INFO: home: myhome,myhome-vpn unchanged (203.0.113.7), no update needed.
-[21:20:05] INFO: parents: parents-house.duckdns.org resolves to 203.0.113.7 (matches).
-[21:20:05] INFO: parents: parents-house unchanged (203.0.113.7), no update needed.
-[21:25:05] INFO: Checking the public IP address...
-[21:25:05] INFO: IPv4: current public address is 203.0.113.42.
 [21:25:05] INFO: home: updating myhome,myhome-vpn - the IPv4 address changed (203.0.113.7 -> 203.0.113.42).
 [21:25:06] INFO: home: myhome,myhome-vpn -> IPv4 203.0.113.42 (UPDATED)
 ```
@@ -221,9 +214,24 @@ updated and why, which ones were left alone, and the answer DuckDNS gave.
 `UPDATED` / `NOCHANGE` at the end of a result line is DuckDNS' own answer -
 `NOCHANGE` means DuckDNS already had that address on record.
 
-Set `log_level: debug` to additionally see which lookup service answered and
-when the next cycle is due. Tokens never appear in the log, not even in
-error messages from `curl`.
+The checks themselves - the address lookup, the DNS records of every domain,
+and the accounts that were left alone - are written at `debug` level. Set
+`log_level: debug` when you want to follow a cycle that does not change
+anything, or to see where your domains currently point:
+
+```text
+[21:20:04] DEBUG: Checking the public IP address...
+[21:20:04] DEBUG: Public IPv4 address 203.0.113.7 (via https://ipv4.icanhazip.com).
+[21:20:04] DEBUG: IPv4: current public address is 203.0.113.7.
+[21:20:04] DEBUG: home: myhome.duckdns.org resolves to 203.0.113.7 (matches).
+[21:20:04] DEBUG: home: myhome-vpn.duckdns.org resolves to 203.0.113.7 (matches).
+[21:20:04] DEBUG: home: myhome,myhome-vpn unchanged (203.0.113.7), no update needed.
+[21:20:05] DEBUG: parents: parents-house.duckdns.org resolves to 203.0.113.7 (matches).
+[21:20:05] DEBUG: parents: parents-house unchanged (203.0.113.7), no update needed.
+[21:20:05] DEBUG: Cycle finished, next check in 300s.
+```
+
+Tokens never appear in the log, not even in error messages from `curl`.
 
 ## Troubleshooting
 

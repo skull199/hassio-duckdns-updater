@@ -1,6 +1,6 @@
 ---
 name: AnyDNS
-version: "1.2.0"
+version: "1.2.1"
 slug: anydns
 description: >-
   Keeps DuckDNS domains pointed at this host's public IP address. Supports

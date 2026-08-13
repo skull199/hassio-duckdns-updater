@@ -316,11 +316,11 @@ ip::resolve() {
 
     case "${OPT_IPV4,,}" in
         "" | duckdns | source)
-            log::info "IPv4: left to DuckDNS, it uses the source address of the request."
+            log::debug "IPv4: left to DuckDNS, it uses the source address of the request."
             ;;
         auto)
             if CURRENT_IPV4="$(ip::detect 4)"; then
-                log::info "IPv4: current public address is ${CURRENT_IPV4}."
+                log::debug "IPv4: current public address is ${CURRENT_IPV4}."
             else
                 CURRENT_IPV4=""
                 log::warning "IPv4: could not determine the public address, letting DuckDNS use the source address."
@@ -329,7 +329,7 @@ ip::resolve() {
         *)
             if ip::is_valid 4 "${OPT_IPV4}"; then
                 CURRENT_IPV4="${OPT_IPV4}"
-                log::info "IPv4: using the configured address ${CURRENT_IPV4}."
+                log::debug "IPv4: using the configured address ${CURRENT_IPV4}."
             else
                 log::error "Option 'ipv4' is not a valid IPv4 address ('${OPT_IPV4}'), letting DuckDNS use the source address."
             fi
@@ -342,7 +342,7 @@ ip::resolve() {
             ;;
         auto)
             if CURRENT_IPV6="$(ip::detect 6)"; then
-                log::info "IPv6: current public address is ${CURRENT_IPV6}."
+                log::debug "IPv6: current public address is ${CURRENT_IPV6}."
             else
                 CURRENT_IPV6=""
                 log::warning "IPv6: could not determine the public address, the AAAA record is left untouched."
@@ -351,7 +351,7 @@ ip::resolve() {
         *)
             if ip::is_valid 6 "${OPT_IPV6}"; then
                 CURRENT_IPV6="${OPT_IPV6}"
-                log::info "IPv6: using the configured address ${CURRENT_IPV6}."
+                log::debug "IPv6: using the configured address ${CURRENT_IPV6}."
             else
                 log::error "Option 'ipv6' is not a valid IPv6 address ('${OPT_IPV6}'), the AAAA record is left untouched."
             fi
@@ -532,11 +532,11 @@ dns::account_matches() {
         if [[ -n "${CURRENT_IPV4}" ]]; then
             if resolved="$(dns::query 4 "${fqdn}")"; then
                 if [[ "${resolved}" != "${CURRENT_IPV4}" ]]; then
-                    log::info "${name}: ${fqdn} resolves to ${resolved}, expected ${CURRENT_IPV4}."
+                    log::debug "${name}: ${fqdn} resolves to ${resolved}, expected ${CURRENT_IPV4}."
                     DNS_MISMATCH="${fqdn} still resolves to ${resolved}"
                     return 1
                 fi
-                log::info "${name}: ${fqdn} resolves to ${resolved} (matches)."
+                log::debug "${name}: ${fqdn} resolves to ${resolved} (matches)."
             else
                 log::warning "${name}: ${fqdn} does not resolve to an IPv4 address."
                 DNS_MISMATCH="${fqdn} does not resolve"
@@ -547,11 +547,11 @@ dns::account_matches() {
         if [[ -n "${CURRENT_IPV6}" ]]; then
             if resolved="$(dns::query 6 "${fqdn}")"; then
                 if [[ "${resolved}" != "${CURRENT_IPV6}" ]]; then
-                    log::info "${name}: ${fqdn} resolves to ${resolved}, expected ${CURRENT_IPV6}."
+                    log::debug "${name}: ${fqdn} resolves to ${resolved}, expected ${CURRENT_IPV6}."
                     DNS_MISMATCH="${fqdn} still resolves to ${resolved}"
                     return 1
                 fi
-                log::info "${name}: ${fqdn} resolves to ${resolved} (matches)."
+                log::debug "${name}: ${fqdn} resolves to ${resolved} (matches)."
             else
                 log::warning "${name}: ${fqdn} does not resolve to an IPv6 address."
                 DNS_MISMATCH="${fqdn} has no AAAA record"
@@ -572,7 +572,7 @@ FIRST_CYCLE="true"
 cycle::run() {
     local now force_seconds entry name token domains previous_v4 previous_v6 updated reason
 
-    log::info "Checking the public IP address..."
+    log::debug "Checking the public IP address..."
     ip::resolve
 
     now="$(date +%s)"
@@ -606,7 +606,7 @@ cycle::run() {
         fi
 
         if [[ -z "${reason}" ]]; then
-            log::info "${name}: ${domains} unchanged (${CURRENT_IPV4:-${CURRENT_IPV6}}), no update needed."
+            log::debug "${name}: ${domains} unchanged (${CURRENT_IPV4:-${CURRENT_IPV6}}), no update needed."
             continue
         fi
 

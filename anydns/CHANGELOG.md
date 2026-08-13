@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.1
+
+- Quieter log: the recurring checks (address lookup, DNS records, accounts
+  that were left alone) moved from `info` to `debug`. At `info` a cycle that
+  changes nothing no longer writes anything, while updates, their reason,
+  the answer of DuckDNS, and every warning are still logged.
+
 ## 1.2.0
 
 - New option `verify_dns` (on by default): every domain of an account is

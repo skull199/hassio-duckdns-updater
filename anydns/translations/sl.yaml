@@ -24,6 +24,11 @@ configuration:
     name: Preskoči nespremenjene naslove
     description: >-
       Posodobitev na DuckDNS pošlji samo, kadar se je naslov res spremenil.
+  update_on_start:
+    name: Posodobi ob zagonu
+    description: >-
+      Takoj po zagonu dodatka enkrat posodobi vse račune, tudi če se naslov ni
+      spremenil. Ponovni zagon dodatka tako vedno osveži DuckDNS.
   force_update_hours:
     name: Prisilna osvežitev
     description: >-

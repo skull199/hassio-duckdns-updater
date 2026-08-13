@@ -51,6 +51,7 @@ ipv4: auto
 ipv6: ""
 seconds: 300
 skip_unchanged: true
+update_on_start: true
 force_update_hours: 24
 log_level: info
 ```
@@ -116,6 +117,14 @@ The setting has no effect when `ipv4` is empty *and* `ipv6` is empty or
 disabled, because then the address is decided by DuckDNS and the add-on has
 nothing to compare.
 
+### Option: `update_on_start`
+
+When `true` (default) every account is updated once right after the add-on
+starts, no matter what the stored state says. Restarting the add-on is
+therefore enough to force a refresh and to see the answer of DuckDNS in the
+log. Set it to `false` to keep the stored state authoritative across
+restarts.
+
 ### Option: `force_update_hours`
 
 Even when nothing changed, each account is refreshed after this many hours
@@ -134,14 +143,16 @@ skipped ones.
    with its domains (tokens are never logged).
 2. Every cycle it determines the current address once and reuses it for all
    accounts.
-3. An account is updated when the address changed, when no successful update
-   has been recorded yet (this includes every add-on restart), when
-   `force_update_hours` has passed, or when `skip_unchanged` is `false`.
+3. An account is updated when the add-on has just been started (unless
+   `update_on_start` is `false`), when the address changed, when no
+   successful update has been recorded yet, when `force_update_hours` has
+   passed, or when `skip_unchanged` is `false`.
 4. Failed requests are retried up to 3 times with a 5 second pause. A `KO`
    answer from DuckDNS is not retried, because it means the token or a
    domain is wrong.
-5. The result of the last successful update is stored in
-   `/data/state.json`, which survives add-on restarts.
+5. The result of the last successful update is stored in `/data/state.json`,
+   which survives add-on restarts. The state is keyed by the domain list of
+   an account, so editing the domains of an account also triggers an update.
 
 ## What the log looks like
 
@@ -155,12 +166,13 @@ updated and why, which ones were left alone, and the answer DuckDNS gave.
 [21:15:02] INFO: Account 'parents': 1 domain(s) -> parents-house
 [21:15:02] INFO: Update interval: 300s, IPv4: auto, IPv6: disabled
 [21:15:02] INFO: Unchanged addresses are skipped, with a forced refresh every 24h.
+[21:15:02] INFO: Every account is refreshed once now, because the add-on was started.
 [21:15:02] INFO: Checking the public IP address...
 [21:15:03] INFO: IPv4: current public address is 203.0.113.7.
-[21:15:03] INFO: home: updating myhome,myhome-vpn - no successful update recorded yet.
+[21:15:03] INFO: home: updating myhome,myhome-vpn - the add-on was just started.
 [21:15:03] INFO: home: myhome,myhome-vpn -> IPv4 203.0.113.7 (UPDATED)
-[21:15:03] INFO: parents: updating parents-house - no successful update recorded yet.
-[21:15:04] INFO: parents: parents-house -> IPv4 203.0.113.7 (UPDATED)
+[21:15:03] INFO: parents: updating parents-house - the add-on was just started.
+[21:15:04] INFO: parents: parents-house -> IPv4 203.0.113.7 (NOCHANGE)
 [21:20:04] INFO: Checking the public IP address...
 [21:20:04] INFO: IPv4: current public address is 203.0.113.7.
 [21:20:04] INFO: home: myhome,myhome-vpn unchanged (203.0.113.7), no update needed.

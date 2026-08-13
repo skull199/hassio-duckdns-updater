@@ -25,6 +25,12 @@ configuration:
     name: Skip unchanged addresses
     description: >-
       Only send an update to DuckDNS when the address actually changed.
+  update_on_start:
+    name: Update on start
+    description: >-
+      Update every account once right after the add-on starts, even when the
+      address did not change. Restarting the add-on then always refreshes
+      DuckDNS.
   force_update_hours:
     name: Forced refresh
     description: >-

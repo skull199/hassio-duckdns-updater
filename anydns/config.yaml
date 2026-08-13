@@ -1,6 +1,6 @@
 ---
 name: AnyDNS
-version: "1.0.0"
+version: "1.1.0"
 slug: anydns
 description: >-
   Keeps DuckDNS domains pointed at this host's public IP address. Supports
@@ -29,6 +29,7 @@ options:
   ipv6: ""
   seconds: 300
   skip_unchanged: true
+  update_on_start: true
   force_update_hours: 24
   log_level: info
 schema:
@@ -41,5 +42,6 @@ schema:
   ipv6: str?
   seconds: int(60,86400)
   skip_unchanged: bool?
+  update_on_start: bool?
   force_update_hours: int(0,720)
   log_level: list(trace|debug|info|notice|warning|error|fatal)?

@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Run shellcheck
         uses: ludeeus/action-shellcheck@master
@@ -41,7 +41,7 @@ jobs:
           - i386
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # --test builds the image without publishing it anywhere; the Supervisor
       # builds the add-on locally when it is installed.

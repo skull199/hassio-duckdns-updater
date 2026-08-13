@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.2
+
+- Dropped the `armhf`, `armv7` and `i386` architectures, which Home Assistant
+  no longer supports since 2025.12. The add-on is built for `aarch64` and
+  `amd64`.
+- Removed `boot` from the add-on configuration, it only repeated the default.
+
 ## 1.2.1
 
 - Quieter log: the recurring checks (address lookup, DNS records, accounts

@@ -1,0 +1,10 @@
+# Shell scripts and container files must keep LF line endings, otherwise they
+# fail to run inside the Linux based add-on container.
+* text=auto eol=lf
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.png binary
+*.jpg binary

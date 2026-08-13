@@ -1,0 +1,45 @@
+---
+name: DuckDNS Updater
+version: "1.0.0"
+slug: duckdns_updater
+description: >-
+  Keeps DuckDNS domains pointed at this host's public IP address. Supports
+  several DuckDNS accounts - every token gets its own list of domains.
+url: https://github.com/skull199/hassio-duckdns-updater/tree/main/duckdns-updater
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+init: false
+startup: services
+boot: auto
+# The updater only talks to duckdns.org. Host networking is used so the request
+# leaves through the host's own interfaces, which keeps the source address
+# correct and makes IPv6 usable when the Docker network has no IPv6.
+host_network: true
+options:
+  accounts:
+    - name: primary
+      token: null
+      domains:
+        - null
+  ipv4: auto
+  ipv6: ""
+  seconds: 300
+  skip_unchanged: true
+  force_update_hours: 24
+  log_level: info
+schema:
+  accounts:
+    - name: str?
+      token: password
+      domains:
+        - str
+  ipv4: str?
+  ipv6: str?
+  seconds: int(60,86400)
+  skip_unchanged: bool?
+  force_update_hours: int(0,720)
+  log_level: list(trace|debug|info|notice|warning|error|fatal)?

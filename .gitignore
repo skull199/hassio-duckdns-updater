@@ -1,0 +1,12 @@
+# Local test artefacts
+/.scratch/
+*.tmp
+state.json
+options.json
+
+# Editors / OS
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+.DS_Store

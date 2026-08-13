@@ -29,6 +29,17 @@ configuration:
     description: >-
       Takoj po zagonu dodatka enkrat posodobi vse račune, tudi če se naslov ni
       spremenil. Ponovni zagon dodatka tako vedno osveži DuckDNS.
+  verify_dns:
+    name: Preveri DNS zapise
+    description: >-
+      Za vsako domeno poglej, kam dejansko kaže, in primerjaj s trenutnim
+      naslovom. Domena, ki kaže drugam ali se ne razreši, se posodobi tudi, če
+      se na tej strani ni nič spremenilo.
+  dns_server:
+    name: DNS strežnik
+    description: >-
+      Strežnik za to poizvedbo, privzeto 1.1.1.1. Pusti prazno za uporabo
+      razreševalnika v vsebniku.
   force_update_hours:
     name: Prisilna osvežitev
     description: >-

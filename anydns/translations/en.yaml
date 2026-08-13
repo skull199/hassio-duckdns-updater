@@ -31,6 +31,17 @@ configuration:
       Update every account once right after the add-on starts, even when the
       address did not change. Restarting the add-on then always refreshes
       DuckDNS.
+  verify_dns:
+    name: Check DNS records
+    description: >-
+      Look up every domain and compare it with the current address. A domain
+      that points somewhere else, or does not resolve, is updated even when
+      nothing changed on this side.
+  dns_server:
+    name: DNS server
+    description: >-
+      Resolver used for that check, 1.1.1.1 by default. Leave empty to use the
+      resolver of the container.
   force_update_hours:
     name: Forced refresh
     description: >-

@@ -52,6 +52,8 @@ ipv6: ""
 seconds: 300
 skip_unchanged: true
 update_on_start: true
+verify_dns: true
+dns_server: 1.1.1.1
 force_update_hours: 24
 log_level: info
 ```
@@ -125,6 +127,33 @@ therefore enough to force a refresh and to see the answer of DuckDNS in the
 log. Set it to `false` to keep the stored state authoritative across
 restarts.
 
+### Option: `verify_dns`
+
+When `true` (default) the add-on does not only trust its own bookkeeping: at
+the end of a cycle that would be skipped, every domain of the account is
+looked up in DNS and compared with the current address. If a domain resolves
+to something else - or does not resolve at all - an update is sent even
+though nothing changed on this side.
+
+This catches the cases the stored state cannot see: a record changed
+somewhere else, a domain that was removed, or an update that silently did
+not take effect. Each lookup is logged, so the add-on log always shows where
+your domains actually point:
+
+```text
+[21:20:04] INFO: home: myhome.duckdns.org resolves to 203.0.113.7 (matches).
+```
+
+Set it to `false` to skip the lookups entirely.
+
+### Option: `dns_server`
+
+Resolver used for those lookups, `1.1.1.1` by default. A public resolver is
+used on purpose: it answers with a fresh record instead of whatever the
+local resolver still has cached. If outbound DNS is blocked on your network
+the add-on automatically falls back to the resolver of the container; set
+this option to an empty string to only ever use that one.
+
 ### Option: `force_update_hours`
 
 Even when nothing changed, each account is refreshed after this many hours
@@ -146,7 +175,10 @@ skipped ones.
 3. An account is updated when the add-on has just been started (unless
    `update_on_start` is `false`), when the address changed, when no
    successful update has been recorded yet, when `force_update_hours` has
-   passed, or when `skip_unchanged` is `false`.
+   passed, when `skip_unchanged` is `false`, or when the DNS check finds a
+   domain that does not point at the current address.
+   The DNS check runs last, so no lookups are made when the account is going
+   to be updated anyway.
 4. Failed requests are retried up to 3 times with a 5 second pause. A `KO`
    answer from DuckDNS is not retried, because it means the token or a
    domain is wrong.
@@ -175,8 +207,11 @@ updated and why, which ones were left alone, and the answer DuckDNS gave.
 [21:15:04] INFO: parents: parents-house -> IPv4 203.0.113.7 (NOCHANGE)
 [21:20:04] INFO: Checking the public IP address...
 [21:20:04] INFO: IPv4: current public address is 203.0.113.7.
+[21:20:04] INFO: home: myhome.duckdns.org resolves to 203.0.113.7 (matches).
+[21:20:04] INFO: home: myhome-vpn.duckdns.org resolves to 203.0.113.7 (matches).
 [21:20:04] INFO: home: myhome,myhome-vpn unchanged (203.0.113.7), no update needed.
-[21:20:04] INFO: parents: parents-house unchanged (203.0.113.7), no update needed.
+[21:20:05] INFO: parents: parents-house.duckdns.org resolves to 203.0.113.7 (matches).
+[21:20:05] INFO: parents: parents-house unchanged (203.0.113.7), no update needed.
 [21:25:05] INFO: Checking the public IP address...
 [21:25:05] INFO: IPv4: current public address is 203.0.113.42.
 [21:25:05] INFO: home: updating myhome,myhome-vpn - the IPv4 address changed (203.0.113.7 -> 203.0.113.42).
@@ -206,6 +241,13 @@ services, set `ipv4: ""` to make that the permanent behaviour.
 **`Could not determine the public IPv6 address`**
 The host has no working IPv6 connectivity. Set `ipv6: ""` to stop the
 lookup, or fix IPv6 on the host.
+
+**`... does not resolve to an IPv4 address`**
+The domain could not be looked up. That is treated as a mismatch and an
+update is sent, which recreates the record if it went missing. If it repeats
+every cycle while the domain clearly works, your network is probably
+blocking DNS to `dns_server` - set that option to an empty string to use the
+resolver of the container only, or set `verify_dns: false`.
 
 **The address never changes although my ISP changed it**
 If Home Assistant sits behind a carrier-grade NAT, the address you get is

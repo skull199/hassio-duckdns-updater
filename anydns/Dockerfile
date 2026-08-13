@@ -11,6 +11,7 @@ ENV LANG=C.UTF-8
 # hadolint ignore=DL3018
 RUN apk add --no-cache \
         bash \
+        bind-tools \
         ca-certificates \
         curl \
         jq \

@@ -20,6 +20,8 @@ readonly CURL_TIMEOUT="${CURL_TIMEOUT:-30}"
 readonly LOOKUP_TIMEOUT="${LOOKUP_TIMEOUT:-10}"
 readonly UPDATE_ATTEMPTS=3
 readonly RETRY_DELAY=5
+readonly DNS_TIMEOUT=3
+readonly DUCKDNS_SUFFIX="duckdns.org"
 
 # Services used to find out the public address of this host. They are tried in
 # order; the first one that answers with a valid address wins.
@@ -105,6 +107,8 @@ OPT_SECONDS=300
 OPT_SKIP_UNCHANGED="true"
 OPT_FORCE_HOURS=24
 OPT_UPDATE_ON_START="true"
+OPT_VERIFY_DNS="true"
+OPT_DNS_SERVER="1.1.1.1"
 
 options::string() {
     local key="${1}" default="${2:-}" value
@@ -156,6 +160,8 @@ options::load() {
     OPT_SKIP_UNCHANGED="$(options::bool 'skip_unchanged' 'true')"
     OPT_FORCE_HOURS="$(options::number 'force_update_hours' 24)"
     OPT_UPDATE_ON_START="$(options::bool 'update_on_start' 'true')"
+    OPT_VERIFY_DNS="$(options::bool 'verify_dns' 'true')"
+    OPT_DNS_SERVER="$(options::string 'dns_server' '1.1.1.1')"
 
     if (( OPT_SECONDS < 60 )); then
         log::warning "An update interval of ${OPT_SECONDS}s is too aggressive, using 60s."
@@ -477,6 +483,86 @@ state::set() {
 }
 
 # ------------------------------------------------------------------------------
+# DNS verification: where does the domain actually point right now?
+# ------------------------------------------------------------------------------
+DNS_AVAILABLE="true"
+DNS_MISMATCH=""
+
+# Prints the first address of the requested family, or fails when the domain
+# does not resolve. The configured resolver is tried first; networks that block
+# outbound DNS fall back to the resolver of the container.
+dns::query() {
+    local family="${1}" fqdn="${2}"
+    local type="A" pattern='^[0-9]{1,3}(\.[0-9]{1,3}){3}$' answer=""
+
+    if [[ "${family}" == "6" ]]; then
+        type="AAAA"
+        pattern='^[0-9a-fA-F:]+$'
+    fi
+
+    if [[ -n "${OPT_DNS_SERVER}" ]]; then
+        answer="$(dig "@${OPT_DNS_SERVER}" +short "+time=${DNS_TIMEOUT}" +tries=1 \
+            "${type}" "${fqdn}" 2> /dev/null | tr -d '\r' | grep -m1 -E "${pattern}")"
+    fi
+    if [[ -z "${answer}" ]]; then
+        answer="$(dig +short "+time=${DNS_TIMEOUT}" +tries=1 \
+            "${type}" "${fqdn}" 2> /dev/null | tr -d '\r' | grep -m1 -E "${pattern}")"
+    fi
+
+    ip::is_valid "${family}" "${answer}" || return 1
+    printf '%s' "${answer}"
+    return 0
+}
+
+# Compares every domain of an account with the address of this cycle. Returns
+# non-zero and fills DNS_MISMATCH as soon as one domain is off.
+dns::account_matches() {
+    local name="${1}" domains="${2}" domain fqdn resolved
+    local -a list=()
+
+    DNS_MISMATCH=""
+    [[ "${OPT_VERIFY_DNS}" == "true" && "${DNS_AVAILABLE}" == "true" ]] || return 0
+    # Without a known address there is nothing to compare against.
+    [[ -n "${CURRENT_IPV4}" || -n "${CURRENT_IPV6}" ]] || return 0
+
+    IFS=, read -r -a list <<< "${domains}"
+    for domain in "${list[@]}"; do
+        fqdn="${domain}.${DUCKDNS_SUFFIX}"
+
+        if [[ -n "${CURRENT_IPV4}" ]]; then
+            if resolved="$(dns::query 4 "${fqdn}")"; then
+                if [[ "${resolved}" != "${CURRENT_IPV4}" ]]; then
+                    log::info "${name}: ${fqdn} resolves to ${resolved}, expected ${CURRENT_IPV4}."
+                    DNS_MISMATCH="${fqdn} still resolves to ${resolved}"
+                    return 1
+                fi
+                log::info "${name}: ${fqdn} resolves to ${resolved} (matches)."
+            else
+                log::warning "${name}: ${fqdn} does not resolve to an IPv4 address."
+                DNS_MISMATCH="${fqdn} does not resolve"
+                return 1
+            fi
+        fi
+
+        if [[ -n "${CURRENT_IPV6}" ]]; then
+            if resolved="$(dns::query 6 "${fqdn}")"; then
+                if [[ "${resolved}" != "${CURRENT_IPV6}" ]]; then
+                    log::info "${name}: ${fqdn} resolves to ${resolved}, expected ${CURRENT_IPV6}."
+                    DNS_MISMATCH="${fqdn} still resolves to ${resolved}"
+                    return 1
+                fi
+                log::info "${name}: ${fqdn} resolves to ${resolved} (matches)."
+            else
+                log::warning "${name}: ${fqdn} does not resolve to an IPv6 address."
+                DNS_MISMATCH="${fqdn} has no AAAA record"
+                return 1
+            fi
+        fi
+    done
+    return 0
+}
+
+# ------------------------------------------------------------------------------
 # Update cycle
 # ------------------------------------------------------------------------------
 # Set for the first cycle after start, so a restart always refreshes DuckDNS
@@ -515,6 +601,8 @@ cycle::run() {
             reason="the IPv6 address changed (${previous_v6:-none} -> ${CURRENT_IPV6:-none})"
         elif (( force_seconds > 0 && now - updated >= force_seconds )); then
             reason="periodic refresh after ${OPT_FORCE_HOURS}h"
+        elif ! dns::account_matches "${name}" "${domains}"; then
+            reason="${DNS_MISMATCH}"
         fi
 
         if [[ -z "${reason}" ]]; then
@@ -572,6 +660,12 @@ main() {
     done
 
     options::load || exit 1
+
+    if [[ "${OPT_VERIFY_DNS}" == "true" ]] && ! command -v dig > /dev/null 2>&1; then
+        DNS_AVAILABLE="false"
+        log::warning "'dig' is missing from the container image, the DNS check is disabled."
+    fi
+
     accounts::load || exit 1
     state::init
 
@@ -584,6 +678,9 @@ main() {
         fi
     else
         log::info "Every account is updated on every cycle."
+    fi
+    if [[ "${OPT_VERIFY_DNS}" == "true" && "${DNS_AVAILABLE}" == "true" ]]; then
+        log::info "DNS check: every domain is looked up and compared with the current address${OPT_DNS_SERVER:+ (resolver ${OPT_DNS_SERVER})}."
     fi
     if [[ "${OPT_UPDATE_ON_START}" == "true" ]]; then
         log::info "Every account is refreshed once now, because the add-on was started."
